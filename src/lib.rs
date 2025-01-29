@@ -1,9 +1,9 @@
+use std::collections::HashMap;
 use std::ffi::CString;
 use std::fs::File;
 use std::os::raw::c_char;
 use std::os::raw::c_uint;
 use std::str::FromStr;
-use std::collections::HashMap;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -159,11 +159,11 @@ pub fn generate_proof(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-    use num_bigint::BigInt;
-    use std::str::FromStr;
-    use anyhow::Result;
     use anyhow::bail;
+    use anyhow::Result;
+    use num_bigint::BigInt;
+    use std::collections::HashMap;
+    use std::str::FromStr;
 
     rust_witness::witness!(multiplier2);
     rust_witness::witness!(keccak256256test);
