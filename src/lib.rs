@@ -5,15 +5,14 @@ use anyhow::Result;
 use num_bigint::BigInt;
 pub type WtnsFn = fn(HashMap<String, Vec<BigInt>>) -> Vec<BigInt>;
 
+#[derive(Debug)]
 pub struct ProofResult {
-    #[allow(unused)] // TODO: Remove this once we have a proper way to handle this
-    proof: String,
-    #[allow(unused)] // TODO: Remove this once we have a proper way to handle this
-    public_signals: String,
+    pub proof: String,
+    pub public_signals: String,
 }
 
 extern "C" {
-    fn groth16_prover_zkey_file(
+    pub fn groth16_prover_zkey_file(
         zkey_file_path: *const std::os::raw::c_char,
         wtns_buffer: *const std::os::raw::c_void,
         wtns_size: std::ffi::c_ulong,
@@ -21,6 +20,14 @@ extern "C" {
         proof_size: *mut std::ffi::c_ulong,
         public_buffer: *mut std::os::raw::c_char,
         public_size: *mut std::ffi::c_ulong,
+        error_msg: *mut std::os::raw::c_char,
+        error_msg_maxsize: std::ffi::c_ulong,
+    ) -> i32;
+
+    pub fn groth16_verify(
+        proof: *const std::os::raw::c_char,
+        inputs: *const std::os::raw::c_char,
+        verification_key: *const std::os::raw::c_char,
         error_msg: *mut std::os::raw::c_char,
         error_msg_maxsize: std::ffi::c_ulong,
     ) -> i32;
@@ -131,6 +138,31 @@ pub fn groth16_prover_zkey_file_wrapper(
     }
 }
 
+/// Wrapper for `groth16_verify`
+pub fn groth16_verify_wrapper(proof: &str, inputs: &str, verification_key: &str) -> Result<bool> {
+    let mut error_msg = vec![0u8; 256]; // Error message buffer
+    let error_msg_ptr = error_msg.as_mut_ptr() as *mut std::ffi::c_char;
+    unsafe {
+        let result = groth16_verify(
+            proof.as_ptr() as *const std::ffi::c_char,
+            inputs.as_ptr() as *const std::ffi::c_char,
+            verification_key.as_ptr() as *const std::ffi::c_char,
+            error_msg_ptr,
+            error_msg.len() as u64,
+        );
+        if result == 2 {
+            let error_string = std::ffi::CStr::from_ptr(error_msg_ptr)
+                .to_string_lossy()
+                .into_owned();
+            return Err(anyhow::anyhow!(
+                "Proof verification failed: {}",
+                error_string
+            ));
+        }
+        Ok(result == 0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
@@ -197,18 +229,18 @@ mod tests {
         )
         .unwrap();
         let b = BigInt::from(1u8);
-        // let c = a.clone() * b.clone();
         inputs.insert("a".to_string(), vec![a.to_string()]);
         inputs.insert("b".to_string(), vec![b.to_string()]);
 
+        // Generate Witness Buffer
         let wtns_buffer = compute_witness(inputs, multiplier2_witness)?;
+
+        // Generate Proof
         let proof_result = super::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer)?;
-        println!("{}", proof_result.proof);
-        println!("{}", proof_result.public_signals);
-        // let valid = super::verify_proof(&zkey_path, proof_json)?;
-        // if !valid {
-        //     bail!("Proof is invalid");
-        // }
+
+        let vkey = std::fs::read_to_string("./test-vectors/multiplier2.vkey.json")?;
+        let valid = super::groth16_verify_wrapper(&proof_result.proof, &proof_result.public_signals, &vkey)?;
+        assert!(valid);
         Ok(())
     }
 
@@ -231,12 +263,10 @@ mod tests {
 
         // Generate Proof
         let proof_result = super::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer)?;
-        println!("{}", proof_result.proof);
-        println!("{}", proof_result.public_signals);
-        // let valid = super::verify_proof(&zkey_path, proof_json)?;
-        // if !valid {
-        //     bail!("Proof is invalid");
-        // }
+
+        let vkey = std::fs::read_to_string("./test-vectors/keccak256_256_test.vkey.json")?;
+        let valid = super::groth16_verify_wrapper(&proof_result.proof, &proof_result.public_signals, &vkey)?;
+        assert!(valid);
         Ok(())
     }
 }
