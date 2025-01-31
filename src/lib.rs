@@ -1,3 +1,18 @@
+//! Rust bindings for rapidsnark proving.
+//!
+//! Prebuilt binaries are provided for the following platforms:
+//! - aarch64-apple-ios
+//! - aarch64-apple-ios-sim
+//! - aarch64-apple-darwin
+//! - x86_64-apple-ios
+//! - x86_64
+//! - aarch64
+//!
+//! If a specific target is not included the sysytem will fallback to
+//! the generic architecture, which may cause problems. e.g. if you compile
+//! for aarch64-linux-generic, the system will fallback to aarch64.
+//!
+
 use std::collections::HashMap;
 use std::ffi::CString;
 use std::fs::File;
@@ -14,6 +29,8 @@ use num_bigint::BigInt;
 use serde::Deserialize;
 use serde::Serialize;
 
+/// A function that converts named inputs to a full witness. This should be generated using e.g.
+/// [rust-witness](https://crates.io/crates/rust-witness).
 pub type WtnsFn = fn(HashMap<String, Vec<BigInt>>) -> Vec<BigInt>;
 
 // match what rapidsnark expects
@@ -30,6 +47,7 @@ struct VerificationKey {
     IC: Vec<[String; 3]>,
 }
 
+/// A structure representing a proof and public signals.
 #[repr(C)]
 pub struct ProofResult {
     proof: *mut c_char,
@@ -46,6 +64,7 @@ extern "C" {
     fn free_proof_result(result: *mut ProofResult);
 }
 
+/// Verify a proof using a zkey. The proof is expected to be encoded as json.
 pub fn verify_proof(zkey_path: &str, proof: String) -> Result<bool> {
     let mut header_reader = ZkeyHeaderReader::new(zkey_path);
     header_reader.read();
@@ -103,6 +122,8 @@ pub fn verify_proof(zkey_path: &str, proof: String) -> Result<bool> {
     }
 }
 
+/// Generate a groth16 proof using a specific zkey. Inputs are expected to be base 10 encoded
+/// strings. Returns a json encoded proof and public signals.
 pub fn generate_proof(
     zkey_path: &str,
     inputs: std::collections::HashMap<String, Vec<String>>,
