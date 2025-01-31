@@ -1,8 +1,9 @@
-use std::path::PathBuf;
+use std::{env, fs, path::{Path, PathBuf}};
 
 fn main() {
-    // #[cfg(test)]
-    rust_witness::transpile::transpile_wasm("./test-vectors".to_string());
+    if let Ok(_) = std::env::var("RUST_WITNESS_LINK_TEST_WITNESS") {
+        rust_witness::transpile::transpile_wasm("./test-vectors".to_string());
+    }
 
     let target = std::env::var("TARGET").unwrap();
     let arch = target.split('-').next().unwrap();
@@ -39,4 +40,29 @@ fn main() {
     println!("cargo:rustc-link-lib=static=fr");
     println!("cargo:rustc-link-lib=static=fq");
     println!("cargo:rustc-link-lib=static=gmp");
+
+    // refer to https://github.com/bbqsrc/cargo-ndk to see how to link the libc++_shared.so file in Android
+    if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
+        android();
+    }
+}
+
+fn android() {
+    println!("cargo:rustc-link-lib=c++_shared");
+
+    if let Ok(output_path) = env::var("CARGO_NDK_OUTPUT_PATH") {
+        let sysroot_libs_path = PathBuf::from(env::var_os("CARGO_NDK_SYSROOT_LIBS_PATH").unwrap());
+        let lib_path = sysroot_libs_path.join("libc++_shared.so");
+        assert!(
+            lib_path.exists(),
+            "Error: Source file {:?} does not exist",
+            lib_path
+        );
+        let dest_dir = Path::new(&output_path).join(&env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
+        println!("cargo:rerun-if-changed={}", dest_dir.display());
+        if !dest_dir.exists() {
+            fs::create_dir_all(&dest_dir).unwrap();
+        }
+        fs::copy(lib_path, Path::new(&dest_dir).join("libc++_shared.so")).unwrap();
+    }
 }
