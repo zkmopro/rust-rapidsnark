@@ -48,6 +48,26 @@ jobs:
           targets: ${{ matrix.target }}
       - name: Build
         run: cargo build --target ${{ matrix.target }}
+  build-android:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        target: 
+          - x86_64-linux-android
+          - aarch64-linux-android
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.81.0"
+          targets: ${{ matrix.target }}
+      - name: Install Android NDK
+        run: cargo install cargo-ndk
+      - name: Build
+        run: cargo ndk -t ${{ matrix.target }} build
   test-linux:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
