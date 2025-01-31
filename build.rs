@@ -6,6 +6,25 @@ use std::process::Command;
 
 const CLONE_RAPIDSNARK_SCRIPT: &str = include_str!("./clone_rapidsnark.sh");
 
+fn copy_dir_recursive(src: &Path, dest: &Path) -> std::io::Result<()> {
+    if !dest.exists() {
+        fs::create_dir_all(dest)?;
+    }
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let src_path = entry.path();
+        let dest_path = dest.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dest_path)?;
+        } else {
+            fs::copy(&src_path, &dest_path)?;
+        }
+    }
+    Ok(())
+}
+
 fn main() {
     if std::env::var("RUST_RAPIDSNARK_LINK_TEST_WITNESS").is_ok() {
         rust_witness::transpile::transpile_wasm("./test-vectors".to_string());
@@ -81,6 +100,21 @@ fn main() {
         .expect("Failed to spawn make arm64_host")
         .wait()
         .expect("make arm64_host errored");
+
+    // Copy lib_dir to the current directory
+    let lib_dir = PathBuf::from(lib_dir);
+    let current_dir = std::env::current_dir().unwrap();
+    let lib_dir_name = lib_dir.file_name().unwrap();
+    let new_lib_dir = current_dir.join(lib_dir_name);
+    println!("new_lib_dir: {}", new_lib_dir.to_string_lossy());
+    if !new_lib_dir.exists() {
+        std::fs::create_dir_all(&new_lib_dir).unwrap();
+    }
+    if lib_dir.is_dir() {
+        copy_dir_recursive(&lib_dir, &new_lib_dir).unwrap();
+    } else {
+        fs::copy(&lib_dir, &new_lib_dir).unwrap();
+    }
 
     // Try to list contents of the target directory
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
