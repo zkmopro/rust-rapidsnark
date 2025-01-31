@@ -140,13 +140,17 @@ pub fn groth16_prover_zkey_file_wrapper(
 
 /// Wrapper for `groth16_verify`
 pub fn groth16_verify_wrapper(proof: &str, inputs: &str, verification_key: &str) -> Result<bool> {
+    let proof_cstr = std::ffi::CString::new(proof).unwrap();
+    let inputs_cstr = std::ffi::CString::new(inputs).unwrap();
+    let verification_key_cstr = std::ffi::CString::new(verification_key).unwrap();
+
     let mut error_msg = vec![0u8; 256]; // Error message buffer
     let error_msg_ptr = error_msg.as_mut_ptr() as *mut std::ffi::c_char;
     unsafe {
         let result = groth16_verify(
-            proof.as_ptr() as *const std::ffi::c_char,
-            inputs.as_ptr() as *const std::ffi::c_char,
-            verification_key.as_ptr() as *const std::ffi::c_char,
+            proof_cstr.as_ptr() as *const std::ffi::c_char,
+            inputs_cstr.as_ptr() as *const std::ffi::c_char,
+            verification_key_cstr.as_ptr() as *const std::ffi::c_char,
             error_msg_ptr,
             error_msg.len() as u64,
         );
@@ -239,7 +243,11 @@ mod tests {
         let proof_result = super::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer)?;
 
         let vkey = std::fs::read_to_string("./test-vectors/multiplier2.vkey.json")?;
-        let valid = super::groth16_verify_wrapper(&proof_result.proof, &proof_result.public_signals, &vkey)?;
+        let valid = super::groth16_verify_wrapper(
+            &proof_result.proof,
+            &proof_result.public_signals,
+            &vkey,
+        )?;
         assert!(valid);
         Ok(())
     }
@@ -265,7 +273,11 @@ mod tests {
         let proof_result = super::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer)?;
 
         let vkey = std::fs::read_to_string("./test-vectors/keccak256_256_test.vkey.json")?;
-        let valid = super::groth16_verify_wrapper(&proof_result.proof, &proof_result.public_signals, &vkey)?;
+        let valid = super::groth16_verify_wrapper(
+            &proof_result.proof,
+            &proof_result.public_signals,
+            &vkey,
+        )?;
         assert!(valid);
         Ok(())
     }
