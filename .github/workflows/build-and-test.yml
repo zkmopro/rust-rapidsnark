@@ -37,10 +37,10 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: "1.81.0"
           override: true
       - name: Run tests
-        run: cargo test
+        run: cargo test -vv
   test-macOS:
     runs-on: macos-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -49,7 +49,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
+          toolchain: "1.81.0"
           override: true
       - name: Run tests
-        run: cargo test
+        run: cargo test -vv
