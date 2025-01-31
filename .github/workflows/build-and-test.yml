@@ -29,6 +29,31 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+  build-ios:
+    runs-on: macos-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
+    strategy:
+      matrix:
+        target: 
+          - aarch64-apple-ios
+          - aarch64-apple-ios-sim
+          - x86_64-apple-ios
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.81.0"
+          targets: ${{ matrix.target }}
+      - name: Install Dependencies
+        run: |
+          if [[ "${{ matrix.target }}" == "aarch64-apple-ios" || "${{ matrix.target }}" == "aarch64-apple-ios-sim" ]]; then
+            rustup target add ${{ matrix.target }}
+            sudo apt update && sudo apt install -y libclang-dev
+          fi
+      - name: Build
+        run: cargo build --target ${{ matrix.target }}
   test-linux:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
@@ -52,4 +77,4 @@ jobs:
           toolchain: "1.81.0"
           override: true
       - name: Run tests
-        run: cargo test -vv
+        run: cargo test
