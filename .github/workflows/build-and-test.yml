@@ -46,12 +46,6 @@ jobs:
         with:
           toolchain: "1.81.0"
           targets: ${{ matrix.target }}
-      - name: Install Dependencies
-        run: |
-          if [[ "${{ matrix.target }}" == "aarch64-apple-ios-sim" || "${{ matrix.target }}" == "x86_64-apple-ios" ]]; then
-            rustup target add ${{ matrix.target }}
-            sudo apt update && sudo apt install -y libclang-dev
-          fi
       - name: Build
         run: cargo build --target ${{ matrix.target }}
   test-linux:

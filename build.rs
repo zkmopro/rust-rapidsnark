@@ -2,6 +2,9 @@ use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+
+const CLONE_RAPIDSNARK_SCRIPT: &str = include_str!("./clone_rapidsnark.sh");
 
 fn main() {
     if std::env::var("RUST_RAPIDSNARK_LINK_TEST_WITNESS").is_ok() {
@@ -10,6 +13,74 @@ fn main() {
 
     let target = std::env::var("TARGET").unwrap();
     let arch = target.split('-').next().unwrap();
+
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
+    let lib_dir = Path::new(&out_dir)
+        .join("rapidsnark")
+        .join("package")
+        .join("lib");
+
+    let rapidsnark_path = Path::new(&out_dir).join(Path::new("rapidsnark"));
+    // If the rapidsnark repo is not cloned, clone it
+    if !rapidsnark_path.exists() {
+        let clone_script_path = Path::new(&out_dir).join(Path::new("clone_rapidsnark.sh"));
+        fs::write(&clone_script_path, CLONE_RAPIDSNARK_SCRIPT)
+            .expect("Failed to write build script");
+        Command::new("sh")
+            .arg(clone_script_path.to_str().unwrap())
+            .spawn()
+            .expect("Failed to spawn rapidsnark build")
+            .wait()
+            .expect("rapidsnark build errored");
+    }
+
+    println!("Detected target: {}", target);
+    //For possible options see witnesscalc/build_gmp.sh
+    let gmp_build_target = match target.as_str() {
+        "aarch64-apple-ios" => "ios",
+        "aarch64-apple-ios-sim" => "ios_simulator",
+        "x86_64-apple-ios" => "ios_simulator",
+        "x86_64-linux-android" => "android_x86_64",
+        "i686-linux-android" => "android_x86_64",
+        "armv7-linux-androideabi" => "android",
+        "aarch64-linux-android" => "android",
+        "aarch64-apple-darwin" => "host", //Use "host" for M Macs, macos_arm64 would fail the subsequent build
+        _ => "host",
+    };
+
+    //For possible options see rapidsnark/Makefile
+    let rapidsnark_build_target = match target.as_str() {
+        "aarch64-apple-ios" => "ios",
+        "aarch64-apple-ios-sim" => "ios_simulator_arm64",
+        "x86_64-apple-ios" => "ios_simulator_x86_64",
+        "x86_64-linux-android" => "android_x86_64",
+        "i686-linux-android" => "android_x86_64",
+        "armv7-linux-androideabi" => "android",
+        "aarch64-linux-android" => "android",
+        "aarch64-apple-darwin" => "arm64_host",
+        _ => "host",
+    };
+
+    // If the rapidsnark library is not built, build it
+    let gmp_dir = rapidsnark_path.join("depends").join("gmp");
+    if !gmp_dir.exists() {
+        Command::new("bash")
+            .current_dir(&rapidsnark_path)
+            .arg("./build_gmp.sh")
+            .arg(gmp_build_target)
+            .spawn()
+            .expect("Failed to spawn build_gmp.sh")
+            .wait()
+            .expect("build_gmp.sh errored");
+    }
+
+    Command::new("make")
+        .arg(rapidsnark_build_target)
+        .current_dir(&rapidsnark_path)
+        .spawn()
+        .expect("Failed to spawn make arm64_host")
+        .wait()
+        .expect("make arm64_host errored");
 
     // Try to list contents of the target directory
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
@@ -27,10 +98,10 @@ fn main() {
         "stdc++"
     };
 
-    println!(
-        "cargo:rustc-link-search=native={}",
-        absolute_lib_path.clone().display()
-    );
+    // println!(
+    //     "cargo:rustc-link-search=native={}",
+    //     absolute_lib_path.clone().display()
+    // );
 
     println!("cargo:rustc-link-lib=static=rapidsnark");
     println!("cargo:rustc-link-lib={}", cpp_stdlib);
@@ -48,6 +119,11 @@ fn main() {
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
         android();
     }
+
+    println!(
+        "cargo:rustc-link-search=native={}",
+        lib_dir.to_string_lossy()
+    );
 }
 
 fn android() {
