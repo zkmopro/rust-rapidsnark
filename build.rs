@@ -1,7 +1,10 @@
-use std::{env, fs, path::{Path, PathBuf}};
+use std::env;
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
 
 fn main() {
-    if let Ok(_) = std::env::var("RUST_WITNESS_LINK_TEST_WITNESS") {
+    if std::env::var("RUST_WITNESS_LINK_TEST_WITNESS").is_ok() {
         rust_witness::transpile::transpile_wasm("./test-vectors".to_string());
     }
 
@@ -58,7 +61,7 @@ fn android() {
             "Error: Source file {:?} does not exist",
             lib_path
         );
-        let dest_dir = Path::new(&output_path).join(&env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
+        let dest_dir = Path::new(&output_path).join(env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
         println!("cargo:rerun-if-changed={}", dest_dir.display());
         if !dest_dir.exists() {
             fs::create_dir_all(&dest_dir).unwrap();

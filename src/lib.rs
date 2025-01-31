@@ -6,7 +6,9 @@ use num_bigint::BigInt;
 pub type WtnsFn = fn(HashMap<String, Vec<BigInt>>) -> Vec<BigInt>;
 
 pub struct ProofResult {
+    #[allow(unused)] // TODO: Remove this once we have a proper way to handle this
     proof: String,
+    #[allow(unused)] // TODO: Remove this once we have a proper way to handle this
     public_signals: String,
 }
 
