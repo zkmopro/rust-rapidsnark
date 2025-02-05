@@ -18,12 +18,18 @@ fn main() {
         let rapidsnark_script_path = Path::new(&out_dir).join(Path::new("download_rapidsnark.sh"));
         fs::write(&rapidsnark_script_path, RAPIDSNARK_DOWNLOAD_SCRIPT)
             .expect("Failed to write build script");
-        Command::new("sh")
+        let child_process = Command::new("sh")
             .arg(rapidsnark_script_path.to_str().unwrap())
-            .spawn()
-            .expect("Failed to spawn rapidsnark download")
-            .wait()
-            .expect("rapidsnark download errored");
+            .spawn();
+        if let Err(e) = child_process {
+            panic!("Failed to spawn rapidsnark download: {}", e);
+        }
+        let status = child_process.unwrap().wait();
+        if let Err(e) = status {
+            panic!("Failed to wait for rapidsnark download: {}", e);
+        } else if !status.unwrap().success() {
+            panic!("Failed to wait for rapidsnark download");
+        }
     }
     let absolute_lib_path = if rapidsnark_path.join(&target).exists() {
         rapidsnark_path.join(&target)
