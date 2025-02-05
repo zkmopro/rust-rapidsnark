@@ -77,6 +77,10 @@ let valid = rust_rapidsnark::groth16_verify_wrapper(
 -   aarch64-linux-android
 -   x86_64-linux-android
 
+## Uploaded binaries
+
+-   Rapidsnark artifacts are uploaded [here](https://github.com/vivianjeng/rapidsnark/actions/runs/13075683259)
+
 ## Community
 
 -   Website: [zkmopro.com](https://zkmopro.com)
