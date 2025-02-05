@@ -6,6 +6,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/zkmopro/rust-rapidsnark"
 documentation = "https://zkmopro.org/"
 homepage = "https://zkmopro.org/"
+description = "Rust wrapper for the Rapidsnark proof system"
 
 [lib]
 
