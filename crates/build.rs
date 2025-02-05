@@ -2,20 +2,34 @@ use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
+
+const RAPIDSNARK_DOWNLOAD_SCRIPT: &str = include_str!("./download_rapidsnark.sh");
 
 fn main() {
-    let target = std::env::var("TARGET").unwrap();
+    let target = env::var("TARGET").unwrap();
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
     let arch = target.split('-').next().unwrap();
 
     // Try to list contents of the target directory
-    let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-    let rapidsnark_dir = manifest_dir.join("rapidsnark");
-    let absolute_lib_path = if rapidsnark_dir.join(&target).exists() {
-        rapidsnark_dir.join(&target)
+    let rapidsnark_path = Path::new(&out_dir).join(Path::new("rapidsnark"));
+    // If the rapidsnark repo is not downloaded, download it
+    if !rapidsnark_path.exists() {
+        let rapidsnark_script_path = Path::new(&out_dir).join(Path::new("download_rapidsnark.sh"));
+        fs::write(&rapidsnark_script_path, RAPIDSNARK_DOWNLOAD_SCRIPT)
+            .expect("Failed to write build script");
+        Command::new("sh")
+            .arg(rapidsnark_script_path.to_str().unwrap())
+            .spawn()
+            .expect("Failed to spawn rapidsnark download")
+            .wait()
+            .expect("rapidsnark download errored");
+    }
+    let absolute_lib_path = if rapidsnark_path.join(&target).exists() {
+        rapidsnark_path.join(&target)
     } else {
-        rapidsnark_dir.join(arch)
+        rapidsnark_path.join(arch)
     };
-
     let compiler = cc::Build::new().get_compiler();
     let cpp_stdlib = if compiler.is_like_clang() {
         "c++"
