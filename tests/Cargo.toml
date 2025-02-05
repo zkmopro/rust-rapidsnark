@@ -1,0 +1,15 @@
+[package]
+name = "tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.95"
+num-bigint = "0.4.6"
+num-traits = "0.2.19"
+rust-rapidsnark = { path = "../crates" }
+rust-witness = "0.1.3"
+
+[build-dependencies]
+rust-rapidsnark = { path = "../crates" }
+rust-witness = "0.1.3"
