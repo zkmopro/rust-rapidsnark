@@ -3,10 +3,13 @@
 //! Prebuilt binaries are provided for the following platforms:
 //! - aarch64-apple-ios
 //! - aarch64-apple-ios-sim
-//! - aarch64-apple-darwin
 //! - x86_64-apple-ios
-//! - x86_64
-//! - aarch64
+//! - aarch64-apple-darwin
+//! - x86_64-apple-darwin
+//! - aarch64-linux-android
+//! - x86_64-linux-android
+//! - x86_64 linux
+//! - arm64 linux
 //!
 //! If a specific target is not included the sysytem will fallback to
 //! the generic architecture, which may cause problems. e.g. if you compile
