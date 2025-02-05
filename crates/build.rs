@@ -4,10 +4,6 @@ use std::path::Path;
 use std::path::PathBuf;
 
 fn main() {
-    if std::env::var("RUST_RAPIDSNARK_LINK_TEST_WITNESS").is_ok() {
-        rust_witness::transpile::transpile_wasm("./test-vectors".to_string());
-    }
-
     let target = std::env::var("TARGET").unwrap();
     let arch = target.split('-').next().unwrap();
 
