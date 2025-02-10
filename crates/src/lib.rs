@@ -33,7 +33,6 @@ pub struct ProofResult {
     pub public_signals: String,
 }
 
-#[link(name = "rapidsnark", kind = "static")]
 extern "C" {
     pub fn groth16_prover_zkey_file(
         zkey_file_path: *const std::os::raw::c_char,
