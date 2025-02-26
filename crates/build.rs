@@ -49,6 +49,7 @@ fn main() {
     );
 
     println!("cargo:rustc-link-lib=static=rapidsnark");
+    println!("cargo:rustc-link-lib=dylib=rapidsnark");
     println!("cargo:rustc-link-lib={}", cpp_stdlib);
     if target.contains("android") {
         // pthread is included in libc in android
@@ -59,6 +60,9 @@ fn main() {
     println!("cargo:rustc-link-lib=static=fr");
     println!("cargo:rustc-link-lib=static=fq");
     println!("cargo:rustc-link-lib=static=gmp");
+    println!("cargo:rustc-link-lib=dylib=fr");
+    println!("cargo:rustc-link-lib=dylib=fq");
+    println!("cargo:rustc-link-lib=dylib=gmp");
 
     // refer to https://github.com/bbqsrc/cargo-ndk to see how to link the libc++_shared.so file in Android
     if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
