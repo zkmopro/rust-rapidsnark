@@ -116,7 +116,7 @@ pub fn groth16_prover_zkey_file_wrapper(
     zkey_path: &str,
     wtns_buffer: Vec<u8>,
 ) -> Result<ProofResult> {
-    let formatted_zkey_path: &str = &zkey_path.to_string();
+    let formatted_zkey_path = zkey_path.to_string();
     let wtns_size = wtns_buffer.len() as u64;
 
     let mut proof_buffer = vec![0u8; 4 * 1024 * 1024]; // Adjust size as needed
