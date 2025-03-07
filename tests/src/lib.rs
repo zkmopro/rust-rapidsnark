@@ -56,7 +56,7 @@ mod tests {
     #[test]
     fn test_prove_rapidsnark() -> Result<()> {
         // Create a new MoproCircom instance
-        let zkey_path = "./test-vectors/multiplier2_final.zkey".to_string();
+        let zkey_path = "./test-vectors/multiplier2_final.zkey";
 
         let mut inputs = HashMap::new();
         let a = BigInt::from_str(
@@ -72,7 +72,7 @@ mod tests {
 
         // Generate Proof
         let proof_result =
-            rust_rapidsnark::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer)?;
+            rust_rapidsnark::groth16_prover_zkey_file_wrapper(zkey_path, wtns_buffer)?;
 
         let vkey = std::fs::read_to_string("./test-vectors/multiplier2.vkey.json")?;
         let valid = rust_rapidsnark::groth16_verify_wrapper(
@@ -87,7 +87,7 @@ mod tests {
     #[test]
     fn test_prove_rapidsnark_keccak() -> Result<()> {
         // Create a new MoproCircom instance
-        let zkey_path = "./test-vectors/keccak256_256_test_final.zkey".to_string();
+        let zkey_path = "./test-vectors/keccak256_256_test_final.zkey";
         // Prepare inputs
         let input_vec = vec![
             116, 101, 115, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -103,7 +103,7 @@ mod tests {
 
         // Generate Proof
         let proof_result =
-            rust_rapidsnark::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer)?;
+            rust_rapidsnark::groth16_prover_zkey_file_wrapper(zkey_path, wtns_buffer)?;
 
         let vkey = std::fs::read_to_string("./test-vectors/keccak256_256_test.vkey.json")?;
         let valid = rust_rapidsnark::groth16_verify_wrapper(

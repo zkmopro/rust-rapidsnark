@@ -116,6 +116,7 @@ pub fn groth16_prover_zkey_file_wrapper(
     zkey_path: &str,
     wtns_buffer: Vec<u8>,
 ) -> Result<ProofResult> {
+    let formatted_zkey_path = std::ffi::CString::new(zkey_path).unwrap();
     let wtns_size = wtns_buffer.len() as u64;
 
     let mut proof_buffer = vec![0u8; 4 * 1024 * 1024]; // Adjust size as needed
@@ -131,7 +132,7 @@ pub fn groth16_prover_zkey_file_wrapper(
 
     unsafe {
         let result = groth16_prover_zkey_file(
-            zkey_path.as_ptr() as *const std::ffi::c_char,
+            formatted_zkey_path.as_ptr() as *const std::ffi::c_char,
             wtns_buffer.as_ptr() as *const std::os::raw::c_void, // Witness buffer
             wtns_size,
             proof_ptr,
