@@ -10,10 +10,10 @@ Include the crate in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rust-rapidsnark = "0.1.0"
+rust-rapidsnark = "0.1"
 
 [build-dependencies]
-rust-rapidsnark = "0.1.0"
+rust-rapidsnark = "0.1"
 ```
 
 It doesn't include the witness generation functions, you need to use one of the following crates to generate the witness:
@@ -37,8 +37,8 @@ Calculate the proof by using the `groth16_prover_zkey_file_wrapper` function.
 It will take a `wtns` bytes array like the output of [witnesscalc](https://github.com/0xPolygonID/witnesscalc) or [snarkjs](https://github.com/iden3/snarkjs).
 
 ```rust
-let zkey_path = "./test-vectors/multiplier2_final.zkey".to_string();
-let proof = rust_rapidsnark::groth16_prover_zkey_file_wrapper(&zkey_path, wtns_buffer).unwrap();
+let zkey_path = "./test-vectors/multiplier2_final.zkey";
+let proof = rust_rapidsnark::groth16_prover_zkey_file_wrapper(zkey_path, wtns_buffer).unwrap();
 ```
 
 ### Verify the proof
