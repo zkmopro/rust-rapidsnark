@@ -1,8 +1,16 @@
 # Rust Rapidsnark
 
-<!-- [![Crates.io](https://img.shields.io/crates/v/witnesscalc-adapter?label=witnesscalc-adapter)](https://crates.io/crates/witnesscalc-adapter) -->
+[![Crates.io](https://img.shields.io/crates/v/rust-rapidsnark?label=rust-rapidsnark)](https://crates.io/crates/rust-rapidsnark)
 
 This project provides a Rust adapter for compiling and linking [Rapidsnark](https://github.com/iden3/rapidsnark) into a native library for target platforms (e.g., mobile devices). It includes macros and functions to facilitate the integration of proof generation into Rust codebases.
+
+## Requirements
+
+### Rust toolchain
+
+```
+cargo 1.81.0 (2dbb1af80 2024-08-20)
+```
 
 ## Usage
 
