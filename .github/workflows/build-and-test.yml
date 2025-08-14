@@ -45,7 +45,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.81.0"
+          toolchain: "1.89.0"
           targets: ${{ matrix.target }}
       - name: Build
         run: cargo build --target ${{ matrix.target }}
@@ -63,7 +63,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: "1.81.0"
+          toolchain: "1.89.0"
           targets: ${{ matrix.target }}
       - name: Install Android NDK
         run: cargo install cargo-ndk
@@ -77,7 +77,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: "1.81.0"
+          toolchain: "1.89.0"
           override: true
       - name: Run tests
         run: cargo test
@@ -89,7 +89,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: "1.81.0"
+          toolchain: "1.89.0"
           override: true
       - name: Run tests
         run: cargo test
@@ -101,7 +101,7 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: "1.81.0"
+          toolchain: "1.89.0"
           override: true
       - name: Run tests
         run: cargo test

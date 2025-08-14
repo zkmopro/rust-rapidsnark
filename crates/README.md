@@ -9,7 +9,7 @@ This project provides a Rust adapter for compiling and linking [Rapidsnark](http
 ### Rust toolchain
 
 ```
-cargo 1.81.0 (2dbb1af80 2024-08-20)
+cargo 1.89.0 (c24e10642 2025-06-23)
 ```
 
 ## Usage
