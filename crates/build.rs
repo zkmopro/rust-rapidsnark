@@ -112,7 +112,7 @@ fn stub_for_ios(out_dir: &str) {
     // Compile the stub into a static lib
     cc::Build::new()
         .file(&stub_path)
-        .out_dir(&out_dir)
+        .out_dir(out_dir)
         .compile("chkstk_stub");
 
     println!("cargo:rustc-link-search=native={out_dir}");
