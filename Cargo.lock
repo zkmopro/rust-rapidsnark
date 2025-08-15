@@ -26,6 +26,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "chkstk_stub"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "047f6ab2f3b9bcaf23b593d1580898e4244d27eadf1a1fae99212ee5735d3d1c"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -86,6 +95,7 @@ version = "0.1.1"
 dependencies = [
  "anyhow",
  "cc",
+ "chkstk_stub",
  "num-bigint",
  "num-traits",
 ]

@@ -11,6 +11,9 @@ fn main() {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
     let arch = target.split('-').next().unwrap();
 
+    // See: https://github.com/zkmopro/chkstk_stub
+    chkstk_stub::build();
+
     // Try to list contents of the target directory
     let rapidsnark_path = Path::new(&out_dir).join(Path::new("rapidsnark"));
     // If the rapidsnark repo is not downloaded, download it
@@ -22,11 +25,11 @@ fn main() {
             .arg(rapidsnark_script_path.to_str().unwrap())
             .spawn();
         if let Err(e) = child_process {
-            panic!("Failed to spawn rapidsnark download: {}", e);
+            panic!("Failed to spawn rapidsnark download: {e}");
         }
         let status = child_process.unwrap().wait();
         if let Err(e) = status {
-            panic!("Failed to wait for rapidsnark download: {}", e);
+            panic!("Failed to wait for rapidsnark download: {e}");
         } else if !status.unwrap().success() {
             panic!("Failed to wait for rapidsnark download");
         }
@@ -49,7 +52,7 @@ fn main() {
     );
 
     println!("cargo:rustc-link-lib=static=rapidsnark");
-    println!("cargo:rustc-link-lib={}", cpp_stdlib);
+    println!("cargo:rustc-link-lib={cpp_stdlib}");
     if target.contains("android") {
         // pthread is included in libc in android
         println!("cargo:rustc-link-lib=c");
@@ -83,11 +86,10 @@ fn android() {
         let lib_path = sysroot_libs_path.join("libc++_shared.so");
         assert!(
             lib_path.exists(),
-            "Error: Source file {:?} does not exist",
-            lib_path
+            "Error: Source file {lib_path:?} does not exist"
         );
         let dest_dir = Path::new(&output_path).join(env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
-        println!("cargo:rerun-if-changed={}", dest_dir.display());
+        println!("cargo:rerun-if-changed={dest_dir:?}");
         if !dest_dir.exists() {
             fs::create_dir_all(&dest_dir).unwrap();
         }
