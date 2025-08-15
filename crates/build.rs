@@ -1,7 +1,6 @@
 use std::env;
 use std::fs;
 use std::path::Path;
-use std::path::PathBuf;
 use std::process::Command;
 
 const RAPIDSNARK_DOWNLOAD_SCRIPT: &str = include_str!("./download_rapidsnark.sh");
@@ -70,29 +69,5 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=fr");
         println!("cargo:rustc-link-lib=dylib=fq");
         println!("cargo:rustc-link-lib=dylib=gmp");
-    }
-
-    // refer to https://github.com/bbqsrc/cargo-ndk to see how to link the libc++_shared.so file in Android
-    if env::var("CARGO_CFG_TARGET_OS").unwrap() == "android" {
-        android();
-    }
-}
-
-fn android() {
-    println!("cargo:rustc-link-lib=c++_shared");
-
-    if let Ok(output_path) = env::var("CARGO_NDK_OUTPUT_PATH") {
-        let sysroot_libs_path = PathBuf::from(env::var_os("CARGO_NDK_SYSROOT_LIBS_PATH").unwrap());
-        let lib_path = sysroot_libs_path.join("libc++_shared.so");
-        assert!(
-            lib_path.exists(),
-            "Error: Source file {lib_path:?} does not exist"
-        );
-        let dest_dir = Path::new(&output_path).join(env::var("CARGO_NDK_ANDROID_TARGET").unwrap());
-        println!("cargo:rerun-if-changed={dest_dir:?}");
-        if !dest_dir.exists() {
-            fs::create_dir_all(&dest_dir).unwrap();
-        }
-        fs::copy(lib_path, Path::new(&dest_dir).join("libc++_shared.so")).unwrap();
     }
 }
