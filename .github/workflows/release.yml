@@ -1,0 +1,49 @@
+name: Publish Crate
+
+on:
+    release:
+        types: [created]
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v5
+
+            - name: Install Rust toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: "1.89.0"
+                  components: rustfmt
+                  override: true
+
+            - name: Extract release version
+              id: version
+              run: |
+                  TAG_VERSION="${GITHUB_REF#refs/tags/}"
+                  # Strip leading 'v'
+                  RELEASE_VERSION="${TAG_VERSION#v}"
+                  echo "RELEASE_VERSION=$RELEASE_VERSION" >> $GITHUB_ENV
+
+            - name: Check Cargo.toml version matches tag
+              run: |
+                  CRATE_VERSION=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].version')
+                  if [ "$CRATE_VERSION" != "$RELEASE_VERSION" ]; then
+                    echo "❌ Cargo.toml version ($CRATE_VERSION) does not match release tag ($RELEASE_VERSION)"
+                    exit 1
+                  fi
+
+            - name: Check if version already published
+              run: |
+                  CRATE_NAME=$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].name')
+                  if cargo search "^$CRATE_NAME$" --limit 1 | grep -q "$RELEASE_VERSION"; then
+                    echo "❌ Version $RELEASE_VERSION already exists on crates.io"
+                    exit 1
+                  fi
+
+            - name: Publish to crates.io
+              env:
+                  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+              run: cargo publish -p rust-rapidsnark
