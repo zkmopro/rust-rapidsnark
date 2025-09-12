@@ -65,7 +65,6 @@ fn main() {
     if !(env::var("CARGO_CFG_TARGET_OS").unwrap().contains("ios")
         || env::var("CARGO_CFG_TARGET_OS").unwrap().contains("android"))
     {
-        println!("cargo:rustc-link-lib=dylib=rapidsnark");
         println!("cargo:rustc-link-lib=dylib=fr");
         println!("cargo:rustc-link-lib=dylib=fq");
         println!("cargo:rustc-link-lib=dylib=gmp");
