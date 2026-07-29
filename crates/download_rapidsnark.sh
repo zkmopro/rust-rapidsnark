@@ -1,9 +1,5 @@
 #!/bin/sh
 
-# Fetch the prebuilt rapidsnark static libraries for $TARGET from the upstream
-# iden3/rapidsnark release into $OUT_DIR/rapidsnark/$TARGET, where build.rs
-# looks for them. RAPIDSNARK_DOWNLOAD_BASE_URL overrides the release URL.
-
 # Exit on error
 set -e
 
@@ -24,24 +20,16 @@ BASE_URL=${RAPIDSNARK_DOWNLOAD_BASE_URL:-https://github.com/iden3/rapidsnark/rel
 BUILD_DIR=$OUT_DIR/rapidsnark
 LIB_DIR=$BUILD_DIR/$TARGET
 
-# The archives crates/build.rs links against.
 REQUIRED_LIBS="librapidsnark.a libfr.a libfq.a libgmp.a"
 
 ARCH=$(echo "$TARGET" | cut -d'-' -f1)
 
-# Assets are named by platform, not by target triple. Targets missing here fall
-# back to the generic Linux build for their architecture, which may not link.
+# Apple assets are universal archives, which rustc rejects when bundling a static
+# library ("Unsupported archive identifier"), so thin them to LIPO_ARCH.
 #
-# LIPO_ARCH is the Mach-O slice to keep. Apple assets are universal archives,
-# which rustc rejects when bundling a static library ("Unsupported archive
-# identifier"), because some of their slices are not valid ar archives.
-#
-# SHARED_LIB is copied alongside the archives on Linux. build.rs asks for these
-# libraries as both static and dylib, and rustc resolves that to a single
-# -lrapidsnark placed after -lstdc++, which GNU ld cannot satisfy from the
-# archive alone. Linking the .so instead defers its C++ deps to the dynamic
-# linker. See https://github.com/zkmopro/rust-rapidsnark/pull/11 for removing
-# the dylib request outright.
+# build.rs asks for both static and dylib, which rustc resolves to one
+# -lrapidsnark after -lstdc++. GNU ld cannot satisfy that from the archive, so
+# Linux also needs SHARED_LIB. https://github.com/zkmopro/rust-rapidsnark/pull/11
 LIPO_ARCH=
 SHARED_LIB=
 case "$TARGET" in
@@ -53,8 +41,7 @@ case "$TARGET" in
         SLUG=iOS-Simulator
         LIPO_ARCH=arm64
         ;;
-    # libfr.a and libfq.a in the simulator asset are arm64 only, so ensure_arch
-    # rejects this target and points at RAPIDSNARK_LIB_DIR.
+    # Rejected by ensure_arch: the simulator libfr.a and libfq.a are arm64 only.
     x86_64-apple-ios)
         SLUG=iOS-Simulator
         LIPO_ARCH=x86_64
@@ -91,8 +78,7 @@ esac
 
 ASSET=rapidsnark-$SLUG-$RAPIDSNARK_VERSION.zip
 
-# sha256 of each pinned asset, so a retagged upstream release cannot swap
-# binaries underneath us. Regenerate with:
+# Regenerate with:
 #   gh api repos/iden3/rapidsnark/releases/tags/$RAPIDSNARK_VERSION \
 #     --jq '.assets[] | "\(.name) \(.digest)"'
 case "$SLUG" in
@@ -110,7 +96,6 @@ verify_checksum() {
     zip_file="$1"
     expected="$2"
 
-    # shasum ships with macOS, sha256sum with coreutils on Linux.
     if command -v shasum > /dev/null 2>&1; then
         actual=$(shasum -a 256 "$zip_file" | cut -d' ' -f1)
     else
@@ -125,9 +110,8 @@ verify_checksum() {
     fi
 }
 
-# Thin a universal archive down to $arch_name, or reject a thin archive that is
-# the wrong architecture. Upstream coverage is uneven per library, so without
-# this a mismatch would only surface when an app links the rlib.
+# Upstream coverage is uneven per library, so reject a mismatch here rather than
+# leave it to surface when an app links the rlib.
 ensure_arch() {
     lib_file="$1"
     arch_name="$2"
@@ -160,8 +144,7 @@ report_missing_arch() {
     echo "Set RAPIDSNARK_LIB_DIR to a directory holding $1 builds of $REQUIRED_LIBS to build this target."
 }
 
-# Skip the download only when every library is already there, so an interrupted
-# build cannot leave a partial directory that looks finished.
+# Every library, so an interrupted build cannot look finished.
 unpacked=yes
 for lib in $REQUIRED_LIBS $SHARED_LIB; do
     if [ ! -f "$LIB_DIR/$lib" ]; then
@@ -193,9 +176,8 @@ mkdir -p "$EXTRACT_DIR"
 echo "Unzipping $ASSET"
 unzip -q "$ZIP_FILE" -d "$EXTRACT_DIR"
 
-# The iOS assets keep the archives at the top level, every other platform nests
-# them under lib/, so find by name rather than assuming a path.
-for lib in $REQUIRED_LIBS; do
+# The iOS assets keep these at the top level, other platforms nest them in lib/.
+for lib in $REQUIRED_LIBS $SHARED_LIB; do
     src=$(find "$EXTRACT_DIR" -type f -name "$lib" | head -1)
     if [ -z "$src" ]; then
         echo "$ASSET does not contain $lib"
@@ -209,16 +191,6 @@ for lib in $REQUIRED_LIBS; do
         exit 1
     fi
 done
-
-if [ -n "$SHARED_LIB" ]; then
-    src=$(find "$EXTRACT_DIR" -type f -name "$SHARED_LIB" | head -1)
-    if [ -z "$src" ]; then
-        echo "$ASSET does not contain $SHARED_LIB"
-        rm -rf "$LIB_DIR" "$EXTRACT_DIR"
-        exit 1
-    fi
-    cp "$src" "$LIB_DIR/$SHARED_LIB"
-fi
 
 rm -rf "$EXTRACT_DIR" "$ZIP_FILE"
 

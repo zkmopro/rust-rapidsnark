@@ -5,9 +5,7 @@ use std::process::Command;
 
 const RAPIDSNARK_DOWNLOAD_SCRIPT: &str = include_str!("./download_rapidsnark.sh");
 
-/// Directory of prebuilt libraries to link instead of downloading any.
 const LIB_DIR_ENV: &str = "RAPIDSNARK_LIB_DIR";
-/// Release URL to download from, for mirrors and caches.
 const BASE_URL_ENV: &str = "RAPIDSNARK_DOWNLOAD_BASE_URL";
 
 fn main() {
@@ -56,8 +54,6 @@ fn main() {
     }
 }
 
-/// Populate `$OUT_DIR/rapidsnark/<target>` and return it. The script exits early
-/// when the libraries are already there.
 fn download_prebuilt(out_dir: &str, target: &str) -> PathBuf {
     let lib_path = Path::new(out_dir).join("rapidsnark").join(target);
 
