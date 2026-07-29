@@ -1,12 +1,8 @@
 #!/bin/sh
 
-# Fetch the prebuilt rapidsnark static libraries for $TARGET and leave them,
-# flattened, in $OUT_DIR/rapidsnark/$TARGET where build.rs looks for them.
-#
-# Libraries come from the upstream iden3/rapidsnark GitHub release. Set
-# RAPIDSNARK_DOWNLOAD_BASE_URL to pull the same assets from a mirror, or set
-# RAPIDSNARK_LIB_DIR (read by build.rs) to use local libraries and skip the
-# network altogether.
+# Fetch the prebuilt rapidsnark static libraries for $TARGET from the upstream
+# iden3/rapidsnark release into $OUT_DIR/rapidsnark/$TARGET, where build.rs
+# looks for them. RAPIDSNARK_DOWNLOAD_BASE_URL overrides the release URL.
 
 # Exit on error
 set -e
@@ -33,16 +29,12 @@ REQUIRED_LIBS="librapidsnark.a libfr.a libfq.a libgmp.a"
 
 ARCH=$(echo "$TARGET" | cut -d'-' -f1)
 
-# Upstream names its assets by platform, not by Rust target triple, so map the
-# triple onto an asset. Targets missing from this list fall back to the generic
-# Linux build for their architecture, which may not link.
+# Assets are named by platform, not by target triple. Targets missing here fall
+# back to the generic Linux build for their architecture, which may not link.
 #
-# LIPO_ARCH is the Mach-O slice to keep, set only for Apple platforms. Their
-# assets ship universal archives, and rustc rejects those outright when
-# bundling a static library: the arm64e slice of the iOS libgmp.a and the arm64
-# slice of the simulator librapidsnark.a are not themselves valid ar archives,
-# so it fails with "Unsupported archive identifier". Reducing each archive to
-# the one slice being built for sidesteps that.
+# LIPO_ARCH is the Mach-O slice to keep. Apple assets are universal archives,
+# which rustc rejects when bundling a static library ("Unsupported archive
+# identifier"), because some of their slices are not valid ar archives.
 LIPO_ARCH=
 case "$TARGET" in
     aarch64-apple-ios)
@@ -53,9 +45,8 @@ case "$TARGET" in
         SLUG=iOS-Simulator
         LIPO_ARCH=arm64
         ;;
-    # librapidsnark.a and libgmp.a in the simulator asset are universal, but
-    # libfr.a and libfq.a are built arm64 only, so this target gets as far as
-    # the ensure_arch check and then asks for RAPIDSNARK_LIB_DIR.
+    # libfr.a and libfq.a in the simulator asset are arm64 only, so ensure_arch
+    # rejects this target and points at RAPIDSNARK_LIB_DIR.
     x86_64-apple-ios)
         SLUG=iOS-Simulator
         LIPO_ARCH=x86_64
@@ -101,19 +92,15 @@ case "$SLUG" in
     linux-x86_64) SHA256=2ec59e3aa5ff498e862d60b3b7abdcd094ea484271750ec1ea14fb7c1305e423 ;;
 esac
 
-# Verify the download against the pinned digest. A host without either checksum
-# tool warns rather than fails, so a missing coreutils cannot break the build.
 verify_checksum() {
     zip_file="$1"
     expected="$2"
 
+    # shasum ships with macOS, sha256sum with coreutils on Linux.
     if command -v shasum > /dev/null 2>&1; then
         actual=$(shasum -a 256 "$zip_file" | cut -d' ' -f1)
-    elif command -v sha256sum > /dev/null 2>&1; then
-        actual=$(sha256sum "$zip_file" | cut -d' ' -f1)
     else
-        echo "warning: neither shasum nor sha256sum is available, skipping checksum verification"
-        return 0
+        actual=$(sha256sum "$zip_file" | cut -d' ' -f1)
     fi
 
     if [ "$actual" != "$expected" ]; then
@@ -124,15 +111,13 @@ verify_checksum() {
     fi
 }
 
-# Reduce a universal archive to the single slice being built for, and confirm a
-# thin archive is already the right architecture. Upstream coverage is uneven
-# per library, so checking here turns a silent architecture mismatch (which
-# would only surface when an app links the rlib) into a build failure.
+# Thin a universal archive down to $arch_name, or reject a thin archive that is
+# the wrong architecture. Upstream coverage is uneven per library, so without
+# this a mismatch would only surface when an app links the rlib.
 ensure_arch() {
     lib_file="$1"
     arch_name="$2"
 
-    # Not Mach-O, so there is nothing to check. ELF assets are single-arch.
     info=$(lipo -info "$lib_file" 2> /dev/null) || return 0
 
     case "$info" in
@@ -142,10 +127,7 @@ ensure_arch() {
                 report_missing_arch "$arch_name"
                 return 1
             fi
-            if ! lipo -thin "$arch_name" -output "$lib_file.thin" "$lib_file"; then
-                echo "Failed to extract the $arch_name slice of $lib_file"
-                return 1
-            fi
+            lipo -thin "$arch_name" -output "$lib_file.thin" "$lib_file" || return 1
             mv "$lib_file.thin" "$lib_file"
             ;;
         *)
@@ -164,8 +146,8 @@ report_missing_arch() {
     echo "Set RAPIDSNARK_LIB_DIR to a directory holding $1 builds of $REQUIRED_LIBS to build this target."
 }
 
-# Already unpacked by an earlier build in this OUT_DIR. Every library has to be
-# there: a partial directory would otherwise be treated as done and linked.
+# Skip the download only when every library is already there, so an interrupted
+# build cannot leave a partial directory that looks finished.
 unpacked=yes
 for lib in $REQUIRED_LIBS; do
     if [ ! -f "$LIB_DIR/$lib" ]; then
@@ -182,30 +164,23 @@ mkdir -p "$LIB_DIR"
 ZIP_FILE=$BUILD_DIR/$ASSET
 
 echo "Downloading $ASSET from $BASE_URL"
-# -f so an HTTP error fails here instead of surfacing as a corrupt zip.
 if ! curl -fSL -o "$ZIP_FILE" "$BASE_URL/$ASSET"; then
     echo "Failed to download $BASE_URL/$ASSET"
     echo "Set RAPIDSNARK_DOWNLOAD_BASE_URL to use a mirror, or RAPIDSNARK_LIB_DIR to build against local libraries."
     exit 1
 fi
 
-if ! verify_checksum "$ZIP_FILE" "$SHA256"; then
-    exit 1
-fi
+verify_checksum "$ZIP_FILE" "$SHA256"
 
 EXTRACT_DIR=$BUILD_DIR/extract-$SLUG
 rm -rf "$EXTRACT_DIR"
 mkdir -p "$EXTRACT_DIR"
 
 echo "Unzipping $ASSET"
-if ! unzip -q "$ZIP_FILE" -d "$EXTRACT_DIR"; then
-    echo "Failed to unzip $ZIP_FILE"
-    exit 1
-fi
+unzip -q "$ZIP_FILE" -d "$EXTRACT_DIR"
 
-# Asset layout is not uniform: the iOS and iOS-Simulator zips keep the archives
-# at the top level while every other platform nests them under lib/. Copy by
-# name so both shapes end up flat in $LIB_DIR.
+# The iOS assets keep the archives at the top level, every other platform nests
+# them under lib/, so find by name rather than assuming a path.
 for lib in $REQUIRED_LIBS; do
     src=$(find "$EXTRACT_DIR" -type f -name "$lib" | head -1)
     if [ -z "$src" ]; then

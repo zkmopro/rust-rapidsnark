@@ -5,11 +5,9 @@ use std::process::Command;
 
 const RAPIDSNARK_DOWNLOAD_SCRIPT: &str = include_str!("./download_rapidsnark.sh");
 
-/// Directory holding `librapidsnark.a`, `libfr.a`, `libfq.a` and `libgmp.a` to
-/// link against instead of fetching a prebuilt. Lets a build work offline, or
-/// against locally compiled rapidsnark.
+/// Directory of prebuilt libraries to link instead of downloading any.
 const LIB_DIR_ENV: &str = "RAPIDSNARK_LIB_DIR";
-/// Base URL the pinned release assets are fetched from, for mirrors and caches.
+/// Release URL to download from, for mirrors and caches.
 const BASE_URL_ENV: &str = "RAPIDSNARK_DOWNLOAD_BASE_URL";
 
 fn main() {
@@ -58,9 +56,8 @@ fn main() {
     }
 }
 
-/// Run `download_rapidsnark.sh` to populate `$OUT_DIR/rapidsnark/<target>` and
-/// return that directory. The script is a no-op when the libraries are already
-/// there, so it is safe to invoke on every build.
+/// Populate `$OUT_DIR/rapidsnark/<target>` and return it. The script exits early
+/// when the libraries are already there.
 fn download_prebuilt(out_dir: &str, target: &str) -> PathBuf {
     let lib_path = Path::new(out_dir).join("rapidsnark").join(target);
 
