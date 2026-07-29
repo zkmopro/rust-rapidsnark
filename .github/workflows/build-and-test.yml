@@ -35,10 +35,12 @@ jobs:
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
         strategy:
             matrix:
+                # x86_64-apple-ios is absent because upstream builds libfr.a and
+                # libfq.a arm64 only for the iOS simulator. Building it needs
+                # RAPIDSNARK_LIB_DIR, see crates/README.md.
                 target:
                     - aarch64-apple-ios
                     - aarch64-apple-ios-sim
-                    - x86_64-apple-ios
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v5
