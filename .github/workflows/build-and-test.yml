@@ -38,7 +38,6 @@ jobs:
                 target:
                     - aarch64-apple-ios
                     - aarch64-apple-ios-sim
-                    - x86_64-apple-ios
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v5
@@ -94,7 +93,7 @@ jobs:
             - name: Run tests
               run: cargo test
     test-macOS-x86_64:
-        runs-on: macos-13
+        runs-on: macos-15-intel
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
         steps:
             - uses: actions/checkout@v5

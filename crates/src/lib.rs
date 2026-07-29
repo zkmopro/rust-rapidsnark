@@ -1,9 +1,9 @@
 //! Rust bindings for rapidsnark proving.
 //!
-//! Prebuilt binaries are provided for the following platforms:
+//! The static libraries are downloaded at build time from the upstream
+//! [iden3/rapidsnark] GitHub release. Prebuilt libraries cover:
 //! - aarch64-apple-ios
 //! - aarch64-apple-ios-sim
-//! - x86_64-apple-ios
 //! - aarch64-apple-darwin
 //! - x86_64-apple-darwin
 //! - aarch64-linux-android
@@ -11,9 +11,21 @@
 //! - x86_64 linux
 //! - arm64 linux
 //!
-//! If a specific target is not included the sysytem will fallback to
-//! the generic architecture, which may cause problems. e.g. if you compile
-//! for aarch64-linux-generic, the system will fallback to aarch64.
+//! Upstream publishes no x86_64 build of `libfr.a` and `libfq.a` for the iOS
+//! simulator, so `x86_64-apple-ios` requires libraries supplied through
+//! `RAPIDSNARK_LIB_DIR`.
+//!
+//! A target outside that list falls back to the generic build for its
+//! architecture, which may not link. Compiling for aarch64-linux-generic, for
+//! instance, falls back to the arm64 Linux build.
+//!
+//! Two environment variables control where the libraries come from:
+//! - `RAPIDSNARK_LIB_DIR` links `librapidsnark.a`, `libfr.a`, `libfq.a` and
+//!   `libgmp.a` out of a directory you provide, skipping the download.
+//! - `RAPIDSNARK_DOWNLOAD_BASE_URL` fetches the pinned assets from a mirror
+//!   rather than from GitHub.
+//!
+//! [iden3/rapidsnark]: https://github.com/iden3/rapidsnark
 //!
 
 use std::collections::HashMap;

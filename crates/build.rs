@@ -1,43 +1,28 @@
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 const RAPIDSNARK_DOWNLOAD_SCRIPT: &str = include_str!("./download_rapidsnark.sh");
 
+const LIB_DIR_ENV: &str = "RAPIDSNARK_LIB_DIR";
+const BASE_URL_ENV: &str = "RAPIDSNARK_DOWNLOAD_BASE_URL";
+
 fn main() {
+    println!("cargo:rerun-if-env-changed={LIB_DIR_ENV}");
+    println!("cargo:rerun-if-env-changed={BASE_URL_ENV}");
+
     let target = env::var("TARGET").unwrap();
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR not set");
-    let arch = target.split('-').next().unwrap();
 
     // See: https://github.com/zkmopro/chkstk_stub
     chkstk_stub::build();
 
-    // Try to list contents of the target directory
-    let rapidsnark_path = Path::new(&out_dir).join(Path::new("rapidsnark"));
-    // If the rapidsnark repo is not downloaded, download it
-    if !rapidsnark_path.exists() {
-        let rapidsnark_script_path = Path::new(&out_dir).join(Path::new("download_rapidsnark.sh"));
-        fs::write(&rapidsnark_script_path, RAPIDSNARK_DOWNLOAD_SCRIPT)
-            .expect("Failed to write build script");
-        let child_process = Command::new("sh")
-            .arg(rapidsnark_script_path.to_str().unwrap())
-            .spawn();
-        if let Err(e) = child_process {
-            panic!("Failed to spawn rapidsnark download: {e}");
-        }
-        let status = child_process.unwrap().wait();
-        if let Err(e) = status {
-            panic!("Failed to wait for rapidsnark download: {e}");
-        } else if !status.unwrap().success() {
-            panic!("Failed to wait for rapidsnark download");
-        }
-    }
-    let absolute_lib_path = if rapidsnark_path.join(&target).exists() {
-        rapidsnark_path.join(&target)
-    } else {
-        rapidsnark_path.join(arch)
+    let lib_path = match env::var_os(LIB_DIR_ENV) {
+        Some(dir) => PathBuf::from(dir),
+        None => download_prebuilt(&out_dir, &target),
     };
+
     let compiler = cc::Build::new().get_compiler();
     let cpp_stdlib = if compiler.is_like_clang() {
         "c++"
@@ -45,10 +30,7 @@ fn main() {
         "stdc++"
     };
 
-    println!(
-        "cargo:rustc-link-search=native={}",
-        absolute_lib_path.clone().display()
-    );
+    println!("cargo:rustc-link-search=native={}", lib_path.display());
 
     println!("cargo:rustc-link-lib=static=rapidsnark");
     println!("cargo:rustc-link-lib={cpp_stdlib}");
@@ -70,4 +52,25 @@ fn main() {
         println!("cargo:rustc-link-lib=dylib=fq");
         println!("cargo:rustc-link-lib=dylib=gmp");
     }
+}
+
+fn download_prebuilt(out_dir: &str, target: &str) -> PathBuf {
+    let lib_path = Path::new(out_dir).join("rapidsnark").join(target);
+
+    let script_path = Path::new(out_dir).join("download_rapidsnark.sh");
+    fs::write(&script_path, RAPIDSNARK_DOWNLOAD_SCRIPT).expect("Failed to write build script");
+
+    let status = Command::new("sh")
+        .arg(&script_path)
+        .status()
+        .unwrap_or_else(|e| panic!("Failed to run the rapidsnark download script: {e}"));
+
+    if !status.success() {
+        panic!(
+            "Failed to fetch the rapidsnark prebuilt for {target}. Set {BASE_URL_ENV} to fetch \
+             from a mirror, or {LIB_DIR_ENV} to link libraries you already have."
+        );
+    }
+
+    lib_path
 }
