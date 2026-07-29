@@ -35,7 +35,15 @@ ARCH=$(echo "$TARGET" | cut -d'-' -f1)
 # LIPO_ARCH is the Mach-O slice to keep. Apple assets are universal archives,
 # which rustc rejects when bundling a static library ("Unsupported archive
 # identifier"), because some of their slices are not valid ar archives.
+#
+# SHARED_LIB is copied alongside the archives on Linux. build.rs asks for these
+# libraries as both static and dylib, and rustc resolves that to a single
+# -lrapidsnark placed after -lstdc++, which GNU ld cannot satisfy from the
+# archive alone. Linking the .so instead defers its C++ deps to the dynamic
+# linker. See https://github.com/zkmopro/rust-rapidsnark/pull/11 for removing
+# the dylib request outright.
 LIPO_ARCH=
+SHARED_LIB=
 case "$TARGET" in
     aarch64-apple-ios)
         SLUG=iOS
@@ -63,8 +71,14 @@ case "$TARGET" in
     x86_64-linux-android) SLUG=android-x86_64 ;;
     *)
         case "$ARCH" in
-            aarch64 | arm64) SLUG=linux-arm64 ;;
-            x86_64 | amd64) SLUG=linux-x86_64 ;;
+            aarch64 | arm64)
+                SLUG=linux-arm64
+                SHARED_LIB=librapidsnark.so
+                ;;
+            x86_64 | amd64)
+                SLUG=linux-x86_64
+                SHARED_LIB=librapidsnark.so
+                ;;
             *)
                 echo "No rapidsnark prebuilt covers target $TARGET (architecture $ARCH)."
                 echo "Set RAPIDSNARK_LIB_DIR to a directory containing $REQUIRED_LIBS to build against your own."
@@ -149,7 +163,7 @@ report_missing_arch() {
 # Skip the download only when every library is already there, so an interrupted
 # build cannot leave a partial directory that looks finished.
 unpacked=yes
-for lib in $REQUIRED_LIBS; do
+for lib in $REQUIRED_LIBS $SHARED_LIB; do
     if [ ! -f "$LIB_DIR/$lib" ]; then
         unpacked=no
         break
@@ -195,6 +209,16 @@ for lib in $REQUIRED_LIBS; do
         exit 1
     fi
 done
+
+if [ -n "$SHARED_LIB" ]; then
+    src=$(find "$EXTRACT_DIR" -type f -name "$SHARED_LIB" | head -1)
+    if [ -z "$src" ]; then
+        echo "$ASSET does not contain $SHARED_LIB"
+        rm -rf "$LIB_DIR" "$EXTRACT_DIR"
+        exit 1
+    fi
+    cp "$src" "$LIB_DIR/$SHARED_LIB"
+fi
 
 rm -rf "$EXTRACT_DIR" "$ZIP_FILE"
 
